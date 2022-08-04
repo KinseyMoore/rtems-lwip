@@ -198,6 +198,13 @@ def build(bld):
                 cflags='-g -Wall -O0',
                 includes=drv_incl + common_includes + './rtemslwip/test/ ' + os.path.relpath(os.path.join(arch_lib_path,'include')))
 
+    bld.program(features='c',
+                target='ntp01.exe',
+                source='./rtemslwip/test/ntp01/test_main.c',
+                use='ntp m lwip rtemstest',
+                cflags='-g -Wall -O0',
+                includes=ntp_incl + drv_incl + bsd_compat_incl + common_includes + './rtemslwip/test/ ' + os.path.relpath(os.path.join(arch_lib_path,'include')))
+
 def add_flags(flags, new_flags):
     for flag in new_flags:
         if flag not in flags:
