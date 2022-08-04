@@ -60,9 +60,13 @@ xilinx_aarch64_driver_source = [
 
 def build(bld):
     source_files = []
+    ntp_source_files = []
+    ntp_incl = ''
     common_includes = './lwip/src/include ./uLan/ports/os/rtems ./rtemslwip/include '
     driver_source = []
     drv_incl = ' '
+    bsd_compat_sources = ["rtemslwip/bsd_compat/netdb.c", "rtemslwip/bsd_compat/ifaddrs.c", "rtemslwip/bsd_compat/rtems-kernel-program.c"]
+    bsd_compat_incl = './rtemslwip/bsd_compat_include '
 
     arch_lib_path = rtems.arch_bsp_lib_path(bld.env.RTEMS_VERSION,
                                             bld.env.RTEMS_ARCH_BSP)
@@ -76,6 +80,13 @@ def build(bld):
     source_files.append('./rtemslwip/common/syslog.c')
     source_files.append('./rtemslwip/common/rtems_lwip_io.c')
     source_files.append('./rtemslwip/common/network_compat.c')
+
+    with open('ntp-file-import.json', 'r') as cf:
+        files = json.load(cf)
+        for f in files['source-files-to-import']:
+            ntp_source_files.append(os.path.join('./sebhbsd', f))
+        for f in files['header-paths-to-import']:
+            ntp_incl += os.path.join('./sebhbsd', f) + ' '
 
     def walk_sources(path):
         sources = []
@@ -138,6 +149,19 @@ def build(bld):
         cflags='-g -Wall -O0',
         use=['lwip_obj', 'driver_obj'])
     bld.install_files("${PREFIX}/" + arch_lib_path, ["liblwip.a"])
+
+    bld(features ='c',
+        target='ntp_obj',
+        cflags='-g -Wall -O0 -DHAVE_CONFIG_H=1',
+        includes=ntp_incl + drv_incl + bsd_compat_incl + common_includes,
+        source=ntp_source_files + bsd_compat_sources,
+        )
+
+    bld(features='c cstlib',
+        target = 'ntp',
+        cflags='-g -Wall -O0 -DHAVE_CONFIG_H=1',
+        use=['ntp_obj'])
+    bld.install_files("${PREFIX}/" + arch_lib_path, ["libntp.a"])
 
     def install_headers(root_path):
         for root, dirs, files in os.walk(root_path):
